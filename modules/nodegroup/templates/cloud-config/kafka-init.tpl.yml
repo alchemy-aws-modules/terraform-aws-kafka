@@ -1,0 +1,52 @@
+#cloud-config
+
+write_files:
+  - content: |
+      #!/bin/bash
+      set -e
+      ETH1_IP=`ifconfig eth1 | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'`
+      echo advertised.listeners=PLAINTEXT://$ETH1_IP:9092 >> /etc/kafka/server.properties
+    path: /usr/bin/configure-kafka.sh
+    permissions: '0755'
+  - content: |
+      port=9092
+      auto.create.topics.enable=true
+      listeners=PLAINTEXT://0.0.0.0:9092
+      num.network.threads=3
+      num.io.threads=8
+      socket.send.buffer.bytes=102400
+      socket.receive.buffer.bytes=102400
+      socket.request.max.bytes=104857600
+      log.dirs=/data1/kafka
+      num.partitions=1
+      num.recovery.threads.per.data.dir=1
+      log.retention.hours=168
+      log.segment.bytes=1073741824
+      log.retention.check.interval.ms=300000
+      log.cleaner.enable=false
+      zookeeper.connect=${zookeeper_connect}
+      zookeeper.connection.timeout.ms=6000
+    path: /etc/kafka/server.properties
+  - content: |
+      [Unit]
+      Description=Apache Kafka server (broker)
+      Documentation=http://kafka.apache.org/documentation.html
+      Requires=network.target remote-fs.target
+      After=network.target remote-fs.target
+
+      [Service]
+      Type=simple
+      PIDFile=/var/run/kafka.pid
+      ExecStart=/bin/kafka-server-start /etc/kafka/server.properties
+      ExecStop=/bin/kafka-server-stop
+      Restart=on-failure
+      SyslogIdentifier=kafka
+
+      [Install]
+      WantedBy=multi-user.target
+    path: /etc/systemd/system/kafka.service
+
+runcmd:
+  - /usr/bin/configure-kafka.sh
+  - systemctl enable kafka.service
+  - systemctl start kafka.service

@@ -1,0 +1,44 @@
+#cloud-config
+
+write_files:
+  - content: |
+      #!/bin/bash
+      set -e
+      ETH1_IP=`ifconfig eth1 | sed -En -e 's/.*inet ([0-9.]+).*/\1/p'`
+      MATCHING_SERVER_ID=`cat /etc/kafka/zookeeper.properties | sed -n "s/^server.\([0-9]*\)=$ETH1_IP[\:0-9]*/\1/p"`
+      echo $MATCHING_SERVER_ID >> /data1/kafka/myid
+    path: /usr/bin/configure-myid.sh
+    permissions: '0755'
+  - content: |
+      tickTime=2000
+      dataDir=/data1/kafka/
+      clientPort=2181
+      initLimit=5
+      syncLimit=2
+      ${zookeeper_servers}
+      autopurge.snapRetainCount=3
+      autopurge.purgeInterval=24
+    path: /etc/kafka/zookeeper.properties
+  - content: |
+      [Unit]
+      Description=Apache Zookeeper
+      Documentation=http://zookeeper.apache.org/documentation.html
+      Requires=network.target remote-fs.target
+      After=network.target remote-fs.target
+
+      [Service]
+      Type=simple
+      PIDFile=/var/run/zookeeper.pid
+      ExecStart=/bin/zookeeper-server-start /etc/kafka/zookeeper.properties
+      ExecStop=/bin/zookeeper-server-stop
+      Restart=on-failure
+      SyslogIdentifier=zookeeper
+
+      [Install]
+      WantedBy=multi-user.target
+    path: /etc/systemd/system/zookeeper.service
+
+runcmd:
+  - /usr/bin/configure-myid.sh
+  - systemctl enable zookeeper.service
+  - systemctl start zookeeper.service

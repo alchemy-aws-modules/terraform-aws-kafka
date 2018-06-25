@@ -1,0 +1,73 @@
+#cloud-config
+output: { all: "| tee -a /var/log/cloud-init-output.log" }
+
+write_files:
+  - content: |
+      <?xml version="1.0" encoding="utf-8"?>
+      <service>
+        <short>zookeeper</short>
+        <description>Firewall rule for zookeeper ports</description>
+        <port protocol="tcp" port="2888"/>
+        <port protocol="tcp" port="3888"/>
+        <port protocol="tcp" port="2181"/>
+      </service>
+    path: /etc/firewalld/services/zookeeper.xml
+  - content: |
+      <?xml version="1.0" encoding="utf-8"?>
+      <service>
+        <short>kafka</short>
+        <description>Firewall rule for kafka ports</description>
+        <port protocol="tcp" port="9092"/>
+      </service>
+    path: /etc/firewalld/services/kafka.xml
+  - content: |
+      #!/bin/bash
+      set -e
+      echo "=== Setting Variables ==="
+      __AWS_METADATA_ADDR__="169.254.169.254"
+      __MAC_ADDRESS__="$$(curl -s http://$${__AWS_METADATA_ADDR__}/latest/meta-data/network/interfaces/macs/ | awk '{print $$1}')"
+      __INSTANCE_ID__=$$(curl -s http://$${__AWS_METADATA_ADDR__}/latest/meta-data/instance-id)
+      __SUBNET_ID__="$$(curl -s http://$${__AWS_METADATA_ADDR__}/latest/meta-data/network/interfaces/macs/$${__MAC_ADDRESS__}subnet-id)"
+      __ATTACHMENT_ID__=$$(aws ec2 describe-network-interfaces --filters "Name=tag:Reference,Values=${eni_reference}" "Name=subnet-id,Values=$${__SUBNET_ID__}" --query "NetworkInterfaces[0].[Attachment][0].[AttachmentId]" | grep -o 'eni-attach-[a-z0-9]*' || echo '')
+      __ENI_ID__=$$(aws ec2 describe-network-interfaces --filters "Name=status,Values=available" "Name=tag:Reference,Values=${eni_reference}" "Name=subnet-id,Values=$${__SUBNET_ID__}" --output json --query "NetworkInterfaces[0].NetworkInterfaceId" | grep -o 'eni-[a-z0-9]*')
+      __ENI_IP__=$$(aws ec2 describe-network-interfaces --filters "Name=status,Values=available" "Name=tag:Reference,Values=${eni_reference}" "Name=subnet-id,Values=$${__SUBNET_ID__}" --output json --query "NetworkInterfaces[0].PrivateIpAddress" | grep -o "[0-9\.]*")
+      echo "=== Disabling source-dest-check ==="
+      aws ec2 modify-instance-attribute --instance-id $${__INSTANCE_ID__} --no-source-dest-check &>/dev/null || echo "skipped"
+      echo "=== Detach ENI ==="
+      if [[ "x$${__ATTACHMENT_ID__}" != "x" ]]; then aws ec2 detach-network-interface --attachment-id $${__ATTACHMENT_ID__}; sleep 60; fi
+      echo "=== Attach ENI ==="
+      aws ec2 attach-network-interface --network-interface-id $${__ENI_ID__} --instance-id $${__INSTANCE_ID__} --device-index 1
+      echo "=== Configuring firewalld ==="
+      function conf-firewalld() {
+        setenforce 0
+        firewall-cmd --set-default-zone=internal
+        firewall-cmd --permanent --add-service=zookeeper
+        firewall-cmd --permanent --add-service=kafka
+        firewall-cmd --zone=internal --change-interface=eth0,eth1
+        firewall-cmd --reload
+        setenforce 1
+      }
+      conf-firewalld
+      echo "=== Configuring routes ==="
+      /bin/echo "GATEWAYDEV=eth0" >> /etc/sysconfig/network
+      /bin/cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth1
+      DEVICE="eth1"
+      BOOTPROTO="dhcp"
+      ONBOOT="yes"
+      TYPE="Ethernet"
+      USERCTL="yes"
+      PEERDNS="yes"
+      IPV6INIT="no"
+      PERSISTENT_DHCLIENT="1"
+      EOF
+      sleep 10
+      ifup eth1
+      __DEFAULT_GW__=$$(ip route show default | awk '/default/ {print $3}')
+      ip route add default via $${__DEFAULT_GW__} dev eth1 tab 2
+      ip rule add from $${__ENI_IP__}/32 tab 2
+    path: /usr/bin/attach-eni.sh
+    permissions: '0755'
+
+runcmd:
+# attach eni
+  - AWS_DEFAULT_REGION=${region} /usr/bin/attach-eni.sh
