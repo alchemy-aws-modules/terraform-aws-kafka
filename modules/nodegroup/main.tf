@@ -52,7 +52,6 @@ resource "aws_launch_configuration" "nodes" {
   security_groups             = ["${var.security_groups}"]
   iam_instance_profile        = "${var.instance_profile}"
 
-  /* user_data = "${data.template_file.node.rendered}" */
   user_data = "${data.template_cloudinit_config.node.rendered}"
 
   lifecycle {
