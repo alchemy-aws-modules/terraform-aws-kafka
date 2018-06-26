@@ -21,6 +21,14 @@ write_files:
       </service>
     path: /etc/firewalld/services/kafka.xml
   - content: |
+      <?xml version="1.0" encoding="utf-8"?>
+      <service>
+        <short>jmx</short>
+        <description>Firewall rule for jmx_exporter ports</description>
+        <port protocol="tcp" port="7071"/>
+      </service>
+    path: /etc/firewalld/services/jmx.xml
+  - content: |
       #!/bin/bash
       set -e
       echo "=== Setting Variables ==="
@@ -43,6 +51,7 @@ write_files:
         firewall-cmd --set-default-zone=internal
         firewall-cmd --permanent --add-service=zookeeper
         firewall-cmd --permanent --add-service=kafka
+        firewall-cmd --permanent --add-service=jmx
         firewall-cmd --zone=internal --change-interface=eth0,eth1
         firewall-cmd --reload
         setenforce 1

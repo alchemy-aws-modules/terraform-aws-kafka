@@ -106,6 +106,16 @@ resource "aws_security_group_rule" "kafka_remote_ingress" {
   cidr_blocks       = ["${var.remote_access_cidr}"]
 }
 
+resource "aws_security_group_rule" "kafka_jmx_monitoring" {
+  count             = "${length(var.remote_access_cidr) > 0 ? 1 : 0}"
+  type              = "ingress"
+  from_port         = 7071
+  to_port           = 7071
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.kafka.id}"
+  cidr_blocks       = ["${var.remote_access_cidr}"]
+}
+
 resource "aws_security_group" "zookeeper" {
   name        = "${var.name}-zookeeper-sg"
   description = "Zookeeper Security Group"
@@ -167,6 +177,16 @@ resource "aws_security_group_rule" "zookeeper_remote_ingress" {
   type              = "ingress"
   from_port         = 2181
   to_port           = 2181
+  protocol          = "tcp"
+  security_group_id = "${aws_security_group.zookeeper.id}"
+  cidr_blocks       = ["${var.remote_access_cidr}"]
+}
+
+resource "aws_security_group_rule" "zookeeper_jmx_monitoring" {
+  count             = "${length(var.remote_access_cidr) > 0 ? 1 : 0}"
+  type              = "ingress"
+  from_port         = 7071
+  to_port           = 7071
   protocol          = "tcp"
   security_group_id = "${aws_security_group.zookeeper.id}"
   cidr_blocks       = ["${var.remote_access_cidr}"]

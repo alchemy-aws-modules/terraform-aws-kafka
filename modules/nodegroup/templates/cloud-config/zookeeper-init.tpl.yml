@@ -29,6 +29,7 @@ write_files:
       [Service]
       Type=simple
       PIDFile=/var/run/zookeeper.pid
+      Environment="KAFKA_OPTS=-javaagent:/usr/local/share/jmx/jmx_prometheus_javaagent-0.3.0.jar=7071:/etc/jmx_exporter/zookeeper-jmx.yml"
       ExecStart=/bin/zookeeper-server-start /etc/kafka/zookeeper.properties
       ExecStop=/bin/zookeeper-server-stop
       Restart=on-failure
