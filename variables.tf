@@ -7,7 +7,7 @@ variable "ami" {
   default     = "CentOS-7-HVM"
 }
 
-variable "custom_ami" {
+variable "broker_custom_ami" {
   description = "Custom Linux AMI. Overrides AMI region mappings"
   default     = ""
 }
@@ -81,6 +81,11 @@ variable "subnet_ids" {
 
 variable "vpc_id" {
   type = "string"
+}
+
+variable "zookeeper_custom_ami" {
+  description = "Custom Linux AMI. Overrides AMI region mappings"
+  default     = ""
 }
 
 variable "zookeeper_node_instance_type" {

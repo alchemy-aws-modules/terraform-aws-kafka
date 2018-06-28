@@ -245,7 +245,7 @@ data "template_file" "kafka" {
 module "kafka" {
   source           = "./modules/nodegroup"
   ami              = "${var.ami}"
-  custom_ami       = "${var.custom_ami}"
+  custom_ami       = "${var.broker_custom_ami}"
   assign_public_ip = "${var.assign_public_ip}"
   instance_profile = "${aws_iam_instance_profile.instance.name}"
   eni_reference    = "${var.name}-kafka-eni"
@@ -288,7 +288,7 @@ data "template_file" "zookeeper" {
 module "zookeeper" {
   source           = "./modules/nodegroup"
   ami              = "${var.ami}"
-  custom_ami       = "${var.custom_ami}"
+  custom_ami       = "${var.zookeeper_custom_ami}"
   assign_public_ip = "${var.assign_public_ip}"
   instance_profile = "${aws_iam_instance_profile.instance.id}"
   eni_reference    = "${var.name}-zookeeper-eni"
