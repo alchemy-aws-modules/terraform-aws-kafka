@@ -248,6 +248,7 @@ module "kafka" {
   custom_ami       = "${var.broker_custom_ami}"
   assign_public_ip = "${var.assign_public_ip}"
   instance_profile = "${aws_iam_instance_profile.instance.name}"
+  instance_type    = "${var.broker_node_instance_type}"
   eni_reference    = "${var.name}-kafka-eni"
 
   extra_userdata = "${data.template_file.kafka.rendered}"
@@ -291,6 +292,7 @@ module "zookeeper" {
   custom_ami       = "${var.zookeeper_custom_ami}"
   assign_public_ip = "${var.assign_public_ip}"
   instance_profile = "${aws_iam_instance_profile.instance.id}"
+  instance_type    = "${var.zookeeper_node_instance_type}"
   eni_reference    = "${var.name}-zookeeper-eni"
   extra_userdata   = "${data.template_file.zookeeper.rendered}"
 
