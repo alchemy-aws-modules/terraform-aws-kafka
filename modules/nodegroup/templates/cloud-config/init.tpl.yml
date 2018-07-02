@@ -52,15 +52,15 @@ write_files:
         firewall-cmd --permanent --add-service=zookeeper
         firewall-cmd --permanent --add-service=kafka
         firewall-cmd --permanent --add-service=jmx
-        firewall-cmd --zone=internal --change-interface=eth0,eth1
+        firewall-cmd --zone=internal --change-interface=ens3,eth0
         firewall-cmd --reload
         setenforce 1
       }
       conf-firewalld
       echo "=== Configuring routes ==="
-      /bin/echo "GATEWAYDEV=eth0" >> /etc/sysconfig/network
-      /bin/cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth1
-      DEVICE="eth1"
+      /bin/echo "GATEWAYDEV=ens3" >> /etc/sysconfig/network
+      /bin/cat <<EOF > /etc/sysconfig/network-scripts/ifcfg-eth0
+      DEVICE="eth0"
       BOOTPROTO="dhcp"
       ONBOOT="yes"
       TYPE="Ethernet"
@@ -71,9 +71,9 @@ write_files:
       EOF
       echo "Sleeping for 60 seconds"
       sleep 60
-      ifup eth1
+      ifup eth0
       __DEFAULT_GW__=$$(ip route show default | awk '/default/ {print $3}')
-      ip route add default via $${__DEFAULT_GW__} dev eth1 tab 2
+      ip route add default via $${__DEFAULT_GW__} dev eth0 tab 2
       ip rule add from $${__ENI_IP__}/32 tab 2
     path: /usr/bin/attach-eni.sh
     permissions: '0755'
