@@ -69,7 +69,8 @@ write_files:
       IPV6INIT="no"
       PERSISTENT_DHCLIENT="1"
       EOF
-      sleep 10
+      echo "Sleeping for 60 seconds"
+      sleep 60
       ifup eth1
       __DEFAULT_GW__=$$(ip route show default | awk '/default/ {print $3}')
       ip route add default via $${__DEFAULT_GW__} dev eth1 tab 2
